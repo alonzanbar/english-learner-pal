@@ -1,11 +1,13 @@
 import { useState, useCallback, useMemo } from "react";
 import { getAllWords, getWordsBySublist, getSublists, shuffleArray, Word } from "@/lib/vocabulary";
+import { getWordsWithSentences } from "@/lib/sentences";
 import Flashcard from "@/components/Flashcard";
 import QuizCard from "@/components/QuizCard";
+import SentenceQuiz from "@/components/SentenceQuiz";
 import WordList from "@/components/WordList";
-import { BookOpen, Brain, List, Shuffle } from "lucide-react";
+import { BookOpen, Brain, MessageSquare, List, Shuffle } from "lucide-react";
 
-type Mode = "flashcards" | "quiz" | "list";
+type Mode = "flashcards" | "quiz" | "sentences" | "list";
 
 const Index = () => {
   const [mode, setMode] = useState<Mode>("flashcards");
@@ -50,10 +52,16 @@ const Index = () => {
     setQuizKey((k) => k + 1);
   };
 
+  // For sentence mode, filter to words that have sentences
+  const sentenceWordsList = useMemo(() => {
+    const sentenceWords = getWordsWithSentences();
+    return words.filter(w => sentenceWords.includes(w.english.toLowerCase()));
+  }, [words]);
+
   const handleModeChange = (newMode: Mode) => {
     setMode(newMode);
     setCurrentIndex(0);
-    if (newMode === "quiz") resetQuiz();
+    if (newMode === "quiz" || newMode === "sentences") resetQuiz();
   };
 
   const handleSublistChange = (sublist: number) => {
@@ -70,6 +78,7 @@ const Index = () => {
   const modes: { key: Mode; label: string; icon: React.ReactNode }[] = [
     { key: "flashcards", label: "כרטיסיות", icon: <BookOpen size={18} /> },
     { key: "quiz", label: "בוחן", icon: <Brain size={18} /> },
+    { key: "sentences", label: "משפטים", icon: <MessageSquare size={18} /> },
     { key: "list", label: "רשימה", icon: <List size={18} /> },
   ];
 
@@ -184,6 +193,40 @@ const Index = () => {
             </div>
 
             <QuizCard key={quizKey} word={currentWord} onAnswer={handleQuizAnswer} />
+          </div>
+        )}
+
+        {mode === "sentences" && sentenceWordsList.length > 0 && (
+          <div className="flex flex-col items-center gap-6">
+            <div className="flex items-center gap-6 text-sm">
+              <span className="text-success font-bold">✓ {quizScore.correct}</span>
+              <span className="text-destructive font-bold">✗ {quizScore.total - quizScore.correct}</span>
+              <span className="text-muted-foreground">
+                {quizScore.total > 0
+                  ? `${Math.round((quizScore.correct / quizScore.total) * 100)}%`
+                  : "0%"}
+              </span>
+            </div>
+
+            <div className="w-full max-w-md bg-secondary rounded-full h-2">
+              <div
+                className="bg-primary h-2 rounded-full transition-all duration-500"
+                style={{ width: `${((currentIndex) / sentenceWordsList.length) * 100}%` }}
+              />
+            </div>
+
+            <SentenceQuiz
+              key={quizKey}
+              word={sentenceWordsList[currentIndex % sentenceWordsList.length]}
+              onAnswer={(correct) => {
+                setQuizScore((prev) => ({
+                  correct: prev.correct + (correct ? 1 : 0),
+                  total: prev.total + 1,
+                }));
+                setCurrentIndex((prev) => (prev + 1) % sentenceWordsList.length);
+                setQuizKey((k) => k + 1);
+              }}
+            />
           </div>
         )}
 
