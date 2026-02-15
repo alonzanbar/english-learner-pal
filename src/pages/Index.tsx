@@ -86,24 +86,26 @@ const Index = () => {
     <div className="min-h-screen bg-background" dir="rtl">
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container max-w-4xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <BookOpen size={20} className="text-primary-foreground" />
+        <div className="container max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary flex items-center justify-center">
+              <BookOpen size={18} className="text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">אוצר מילים אקדמי</h1>
-              <p className="text-xs text-muted-foreground">AWL – {words.length} מילים</p>
+              <h1 className="text-base sm:text-xl font-bold text-foreground leading-tight">אוצר מילים אקדמי</h1>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">AWL – {words.length} מילים</p>
             </div>
           </div>
+        </div>
 
-          {/* Mode Switcher */}
-          <div className="flex gap-1 bg-secondary rounded-xl p-1">
+        {/* Mode Switcher - separate row on mobile */}
+        <div className="container max-w-4xl mx-auto px-3 pb-2">
+          <div className="flex gap-1 bg-secondary rounded-xl p-1 overflow-x-auto">
             {modes.map((m) => (
               <button
                 key={m.key}
                 onClick={() => handleModeChange(m.key)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center gap-1 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
                   mode === m.key
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
@@ -118,12 +120,12 @@ const Index = () => {
       </header>
 
       {/* Filters */}
-      <div className="container max-w-4xl mx-auto px-4 py-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">רשימה:</span>
+      <div className="container max-w-4xl mx-auto px-3 sm:px-4 py-3">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <span className="text-xs sm:text-sm font-medium text-muted-foreground">רשימה:</span>
           <button
             onClick={() => handleSublistChange(0)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
               selectedSublist === 0
                 ? "bg-primary text-primary-foreground"
                 : "bg-secondary text-secondary-foreground hover:bg-primary/10"
@@ -135,7 +137,7 @@ const Index = () => {
             <button
               key={s}
               onClick={() => handleSublistChange(s)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                 selectedSublist === s
                   ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-secondary-foreground hover:bg-primary/10"
@@ -148,7 +150,7 @@ const Index = () => {
           <div className="mr-auto">
             <button
               onClick={toggleShuffle}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                 shuffled
                   ? "bg-accent text-accent-foreground"
                   : "bg-secondary text-secondary-foreground hover:bg-primary/10"
