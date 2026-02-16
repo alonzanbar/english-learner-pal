@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "lexicon-learner-pal",
+    "staging": "lexicon-learner-pal",
+    "prod": "lexicon-learner-pal"
+  }
+}

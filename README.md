@@ -30,10 +30,10 @@ git clone <YOUR_GIT_URL>
 cd <YOUR_PROJECT_NAME>
 
 # Step 3: Install the necessary dependencies.
-npm i
+cd apps/web && npm i
 
 # Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+make dev
 ```
 
 **Edit a file directly in GitHub**
@@ -60,7 +60,48 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## How can I deploy this project?
+## Deployment (Firebase Hosting)
+
+Static hosting is on Firebase (GCP, HTTPS, CDN). Two environments: **staging** and **prod**.
+
+### One-time setup (CLI only; browser only for sign-in)
+
+The only time a browser opens is for `firebase login` (Google OAuth). Everything else is command line.
+
+1. Install Firebase CLI: `npm install -g firebase-tools`
+2. Sign in (opens browser once): `firebase login`
+3. Create a project (or reuse an existing one):
+   ```bash
+   firebase projects:create YOUR_PROJECT_ID --display-name "Lexicon Learner"
+   ```
+   Project ID must be **lowercase**, with only letters, numbers, and **hyphens** (no underscores). Example: `lexicon-learner-pal`. To use an existing project, run `firebase projects:list` and pick an ID.
+4. Point this repo at the project: edit `.firebaserc` and replace `replace-with-your-project-id` with your project ID (e.g. the one from step 3; same ID for `default`, `staging`, and `prod` is fine).
+
+### Deploy commands (from repo root)
+
+| Command | Description |
+|--------|-------------|
+| `make dev` | Run the web dev server (`apps/web`) |
+| `make deploy-staging` | Build and deploy web to Firebase Hosting (staging) |
+| `make deploy-prod` | Build and deploy web to Firebase Hosting (prod) |
+
+Or run the script directly: `./scripts/deploy-all.sh staging` or `./scripts/deploy-all.sh prod`.
+
+### Enabling the backend later (Phase 1)
+
+When you add `apps/backend` and want to deploy it (e.g. Cloud Run + Django):
+
+```sh
+DEPLOY_BACKEND=1 make deploy-staging
+# or
+DEPLOY_BACKEND=1 ./scripts/deploy-all.sh prod
+```
+
+Without `DEPLOY_BACKEND=1`, only the static web app is deployed.
+
+---
+
+## How can I deploy this project? (Lovable)
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
 
