@@ -1,11 +1,12 @@
 import { useState, useCallback, useMemo } from "react";
 import { getAllWords, getWordsBySublist, getSublists, shuffleArray, Word } from "@/lib/vocabulary";
 import { getWordsWithSentences } from "@/lib/sentences";
+import { useKnownWords } from "@/hooks/use-known-words";
 import Flashcard from "@/components/Flashcard";
 import QuizCard from "@/components/QuizCard";
 import SentenceQuiz from "@/components/SentenceQuiz";
 import WordList from "@/components/WordList";
-import { BookOpen, Brain, MessageSquare, List, Shuffle } from "lucide-react";
+import { BookOpen, Brain, MessageSquare, List, Shuffle, Eye, EyeOff, RotateCcw, Check } from "lucide-react";
 
 type Mode = "flashcards" | "quiz" | "sentences" | "list";
 
@@ -16,6 +17,8 @@ const Index = () => {
   const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
   const [quizKey, setQuizKey] = useState(0);
   const [shuffled, setShuffled] = useState(false);
+  const [hideKnown, setHideKnown] = useState(true);
+  const { knownWords, toggleKnown, resetKnown, isKnown, knownCount } = useKnownWords();
 
   const sublists = useMemo(() => getSublists(), []);
 
@@ -23,9 +26,13 @@ const Index = () => {
     return selectedSublist === 0 ? getAllWords() : getWordsBySublist(selectedSublist);
   }, [selectedSublist]);
 
+  const filteredWords = useMemo(() => {
+    return hideKnown ? baseWords.filter(w => !knownWords.has(w.english)) : baseWords;
+  }, [baseWords, hideKnown, knownWords]);
+
   const words = useMemo(() => {
-    return shuffled ? shuffleArray(baseWords) : baseWords;
-  }, [baseWords, shuffled]);
+    return shuffled ? shuffleArray(filteredWords) : filteredWords;
+  }, [filteredWords, shuffled]);
 
   const currentWord = words[currentIndex];
 
@@ -147,7 +154,7 @@ const Index = () => {
             </button>
           ))}
           
-          <div className="mr-auto">
+          <div className="mr-auto flex items-center gap-1.5">
             <button
               onClick={toggleShuffle}
               className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
@@ -159,6 +166,26 @@ const Index = () => {
               <Shuffle size={14} />
               ערבב
             </button>
+            <button
+              onClick={() => setHideKnown(!hideKnown)}
+              className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                hideKnown
+                  ? "bg-accent text-accent-foreground"
+                  : "bg-secondary text-secondary-foreground hover:bg-primary/10"
+              }`}
+            >
+              {hideKnown ? <EyeOff size={14} /> : <Eye size={14} />}
+              הסתר ידועות {knownCount > 0 && `(${knownCount})`}
+            </button>
+            {knownCount > 0 && (
+              <button
+                onClick={resetKnown}
+                className="flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-secondary text-secondary-foreground hover:bg-destructive/10 hover:text-destructive"
+              >
+                <RotateCcw size={14} />
+                אפס
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -172,6 +199,8 @@ const Index = () => {
             onPrevious={handlePrevious}
             current={currentIndex + 1}
             total={words.length}
+            isKnown={isKnown(currentWord.english)}
+            onToggleKnown={() => toggleKnown(currentWord.english)}
           />
         )}
 
@@ -232,7 +261,7 @@ const Index = () => {
           </div>
         )}
 
-        {mode === "list" && <WordList words={words} />}
+        {mode === "list" && <WordList words={hideKnown ? words : baseWords} isKnown={isKnown} onToggleKnown={toggleKnown} />}
       </main>
     </div>
   );
