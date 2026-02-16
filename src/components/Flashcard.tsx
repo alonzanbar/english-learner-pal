@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Word } from "@/lib/vocabulary";
+import { Check } from "lucide-react";
 
 interface FlashcardProps {
   word: Word;
@@ -7,9 +8,11 @@ interface FlashcardProps {
   onPrevious: () => void;
   current: number;
   total: number;
+  isKnown: boolean;
+  onToggleKnown: () => void;
 }
 
-const Flashcard = ({ word, onNext, onPrevious, current, total }: FlashcardProps) => {
+const Flashcard = ({ word, onNext, onPrevious, current, total, isKnown, onToggleKnown }: FlashcardProps) => {
   const [flipped, setFlipped] = useState(false);
 
   const handleFlip = () => setFlipped(!flipped);
@@ -57,6 +60,17 @@ const Flashcard = ({ word, onNext, onPrevious, current, total }: FlashcardProps)
           className="px-6 py-3 rounded-xl bg-secondary text-secondary-foreground font-medium hover:opacity-80 transition-opacity"
         >
           ← הקודם
+        </button>
+        <button
+          onClick={onToggleKnown}
+          className={`px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
+            isKnown
+              ? "bg-success text-success-foreground"
+              : "bg-secondary text-secondary-foreground hover:opacity-80"
+          }`}
+        >
+          <Check size={16} />
+          {isKnown ? "ידוע" : "סמן כידוע"}
         </button>
         <button
           onClick={handleNext}
