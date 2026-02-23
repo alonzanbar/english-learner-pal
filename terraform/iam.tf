@@ -7,3 +7,10 @@ resource "google_service_account_iam_member" "deployer_act_as_compute" {
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${var.deployer_sa_email}"
 }
+
+# Allow the Cloud Run service (default compute SA) to read/write Firestore (wordlist_files collection).
+resource "google_project_iam_member" "backend_firestore" {
+  project = var.project_id
+  role    = "roles/datastore.user"
+  member  = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+}

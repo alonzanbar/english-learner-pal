@@ -1,7 +1,7 @@
 {
   "name": "wordlist-backend",
   "version": "0.1.0",
-  "description": "Dummy word-list API (default vocabulary.csv only)",
+  "description": "Word-list API: default vocabulary + GCS/Firestore uploads",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -11,6 +11,8 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@google-cloud/firestore": "^7.1.0",
+    "@google-cloud/storage": "^7.7.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "multer": "^1.4.5-lts.1"

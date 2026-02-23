@@ -9,17 +9,35 @@ export interface Word {
 let _words: Word[] | null = null;
 let _loadPromise: Promise<Word[]> | null = null;
 
-/** Fetch /api/files, take first file, load its words, cache and return. */
+/** Minimal fallback when API is unavailable (e.g. local dev without backend). */
+const FALLBACK_WORDS: Word[] = [
+  { english: "example", hebrew: "דוגמה", sublist: 1 },
+  { english: "local", hebrew: "מקומי", sublist: 1 },
+  { english: "word", hebrew: "מילה", sublist: 1 },
+];
+
+/** Clear cached words so the next ensureWordsLoaded() refetches from the API. */
+export function clearWordsCache(): void {
+  _words = null;
+  _loadPromise = null;
+}
+
+/** Fetch /api/files, take first file, load its words, cache and return. On failure, use fallback so the app works locally. */
 export function ensureWordsLoaded(): Promise<Word[]> {
   if (_words) return Promise.resolve(_words);
   if (_loadPromise) return _loadPromise;
   _loadPromise = (async () => {
-    const files = await listFiles();
-    const first = files[0];
-    if (!first) return [];
-    const words = await getWords(first.id);
-    _words = words;
-    return words;
+    try {
+      const files = await listFiles();
+      const first = files[0];
+      if (!first) return FALLBACK_WORDS;
+      const words = await getWords(first.id);
+      _words = words.length ? words : FALLBACK_WORDS;
+      return _words;
+    } catch {
+      _words = FALLBACK_WORDS;
+      return _words;
+    }
   })();
   return _loadPromise;
 }

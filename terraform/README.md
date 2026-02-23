@@ -1,9 +1,12 @@
 # Backend infrastructure (Terraform)
 
-Creates GCP resources for the word-list API backend:
+Creates GCP resources for the word-list API backend (all infra in Terraform, no manual console steps):
 
 - **Artifact Registry** repository for backend Docker images
-- **Cloud Run** service (wordlist-backend-staging / wordlist-backend-prod) with a placeholder image until the first deploy
+- **Cloud Run** service (wordlist-backend-staging / wordlist-backend-prod) with env `GCS_BUCKET` and `FIRESTORE_DATABASE_ID`
+- **GCS bucket** for uploaded CSV files (`{project_id}-wordlists-{environment}`); Cloud Run SA has objectAdmin
+- **Firestore database** (native) for file metadata (`wordlist_files` collection); Cloud Run SA has datastore.user
+- **IAM** for deployer SA (optional) and for Cloud Run to use Storage + Firestore
 
 ## Prerequisites
 
