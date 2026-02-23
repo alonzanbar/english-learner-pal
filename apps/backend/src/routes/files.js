@@ -10,12 +10,13 @@ const DEFAULT_FILE_ID = 'default';
 const DEFAULT_FILE_NAME = 'Default (AWL)';
 const WORDS_PER_SUBLIST = 60;
 
-/** Resolve path to vocabulary.csv (in data/ next to app or from env). */
+/** Resolve path to vocabulary.csv (in data/ at app root, or from env). */
 function getDefaultVocabPath() {
   if (process.env.DEFAULT_VOCAB_PATH) {
     return process.env.DEFAULT_VOCAB_PATH;
   }
-  return path.join(__dirname, '..', 'data', 'vocabulary.csv');
+  // __dirname is src/routes → go up to app root, then data/
+  return path.join(__dirname, '..', '..', 'data', 'vocabulary.csv');
 }
 
 let cachedWords = null;

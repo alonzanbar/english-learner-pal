@@ -30,3 +30,8 @@ resource "google_project_service" "run" {
   service            = "run.googleapis.com"
   disable_on_destroy = false
 }
+
+# Project number needed to reference the default compute service account
+data "google_project" "current" {
+  project_id = var.project_id
+}

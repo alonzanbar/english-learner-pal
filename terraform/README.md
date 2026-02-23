@@ -20,9 +20,14 @@ terraform plan -var="project_id=lexicon-learner-pal"
 terraform apply -var="project_id=lexicon-learner-pal"
 ```
 
-Optional: set region or environment:
+Optional: set region, environment, or deployer SA (for CI):
 
 ```bash
+# Deployer SA: so GitHub Actions can run gcloud run deploy (act as default compute SA)
+terraform apply -var="project_id=lexicon-learner-pal" \
+  -var="deployer_sa_email=github-actions-backend@lexicon-learner-pal.iam.gserviceaccount.com"
+
+# Or region/environment
 terraform apply -var="project_id=lexicon-learner-pal" -var="region=europe-west1" -var="environment=staging"
 ```
 
@@ -35,7 +40,19 @@ docker push $(terraform -chdir=terraform output -raw artifact_registry_repositor
 gcloud run deploy wordlist-backend-staging --image=$(terraform -chdir=terraform output -raw artifact_registry_repository):latest --region=us-central1
 ```
 
-Or use the GitHub Actions workflow (when added) to build and deploy on push.
+Or use the GitHub Actions workflow to build and deploy on push.
+
+### GitHub Actions: allow deploy SA to act as compute SA
+
+Terraform can manage this binding: set `deployer_sa_email` to your CI service account (e.g. `github-actions-backend@PROJECT_ID.iam.gserviceaccount.com`).
+
+Set the variable when applying (or in a `.tfvars` file):
+
+```bash
+terraform apply -var="project_id=YOUR_PROJECT_ID" -var="deployer_sa_email=github-actions-backend@YOUR_PROJECT_ID.iam.gserviceaccount.com"
+```
+
+Terraform will grant that service account `roles/iam.serviceAccountUser` on the project’s default compute service account so `gcloud run deploy` can succeed in CI.
 
 ## Outputs
 

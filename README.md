@@ -54,6 +54,22 @@ cd apps/web && npm i && cd ../..
 make dev
 ```
 
+**Run locally using the staging API (no local backend)**
+
+If the backend is already deployed to staging (e.g. Cloud Run), you only need to run the frontend and point it at that API:
+
+```sh
+cd apps/web && npm i
+# Use your staging backend URL (from Terraform: terraform -chdir=terraform output -raw backend_url)
+VITE_API_URL=https://wordlist-backend-staging-XXXXX.run.app npm run dev
+```
+
+Then open http://localhost:8080. The app will call the staging API. Ensure the staging backend allows CORS from `http://localhost:8080` (e.g. via `ALLOWED_ORIGINS` in Cloud Run).
+
+**Run locally with a local backend (two terminals)**
+
+Only if you need to run the API on your machine: start the backend first (Terminal 1), then the web app (Terminal 2). See [apps/backend/README.md](apps/backend/README.md). The web app’s dev server proxies `/api` to the backend when `VITE_API_URL` is not set.
+
 **Edit a file directly in GitHub**
 
 - Navigate to the desired file(s).
