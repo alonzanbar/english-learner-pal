@@ -4,7 +4,7 @@ Use this prompt to bootstrap a new application from a single **project_id**. It 
 
 ---
 
-## Input
+##   Input
 
 - **project_id** (required): Lowercase identifier; letters, numbers, and hyphens only (e.g. `my-app-name`). Used for GCP project ID and repo/project naming.
 - **display_name** (optional): Human-readable name (e.g. `"My App Name"`). Defaults to `project_id`.
