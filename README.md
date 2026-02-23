@@ -1,5 +1,23 @@
 # Welcome to your Lovable project
 
+## Bootstrap a new app (one command)
+
+From this repo root, you can create a **new** GitHub repo and full project (Vite + React + TS, Firebase scripts, Makefile) in one go:
+
+```bash
+./scripts/bootstrap-new-app.sh <project_id> ["Display Name"]
+```
+
+Example: `./scripts/bootstrap-new-app.sh my-cool-app "My Cool App"`. Requires [GitHub CLI](https://cli.github.com/) (`gh auth login`). The new project is created in a sibling directory and pushed to GitHub. Then in the new repo run `./scripts/setup-firebase-project.sh <project_id> "Display Name"` once for GCP/Firebase.
+
+**Bootstrap from an existing repo:** Clone an existing GitHub repo, reshape it to this monorepo layout (apps/web + Makefile + scripts), create a **new** GitHub repo, and push:
+
+```bash
+./scripts/bootstrap-from-repo.sh <SOURCE_REPO> <NEW_PROJECT_ID> ["Display Name"]
+```
+
+Example: `./scripts/bootstrap-from-repo.sh https://github.com/foo/old-app my-new-app "My New App"`. SOURCE_REPO can be a URL or `owner/repo`. The source repo is not modified.
+
 ## Project info
 
 **URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
@@ -29,10 +47,10 @@ git clone <YOUR_GIT_URL>
 # Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
 
-# Step 3: Install the necessary dependencies.
-cd apps/web && npm i
+# Step 3: Install the necessary dependencies (run from project root).
+cd apps/web && npm i && cd ../..
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Step 4: Start the development server (from project root).
 make dev
 ```
 
@@ -64,18 +82,36 @@ This project is built with:
 
 Static hosting is on Firebase (GCP, HTTPS, CDN). Two environments: **staging** and **prod**.
 
-### One-time setup (CLI only; browser only for sign-in)
+### One-time setup (all from command line; browser only for sign-in)
 
-The only time a browser opens is for `firebase login` (Google OAuth). Everything else is command line.
+The only time a browser opens is for sign-in. Everything else is CLI.
 
-1. Install Firebase CLI: `npm install -g firebase-tools`
-2. Sign in (opens browser once): `firebase login`
-3. Create a project (or reuse an existing one):
+1. Install tools:
    ```bash
-   firebase projects:create YOUR_PROJECT_ID --display-name "Lexicon Learner"
+   npm install -g firebase-tools
+   brew install google-cloud-sdk   # or https://cloud.google.com/sdk/docs/install
    ```
-   Project ID must be **lowercase**, with only letters, numbers, and **hyphens** (no underscores). Example: `lexicon-learner-pal`. To use an existing project, run `firebase projects:list` and pick an ID.
-4. Point this repo at the project: edit `.firebaserc` and replace `replace-with-your-project-id` with your project ID (e.g. the one from step 3; same ID for `default`, `staging`, and `prod` is fine).
+2. Sign in (browser opens once per tool):
+   ```bash
+   firebase login
+   gcloud auth login
+   ```
+   Use the same Google account for both.
+3. Create the Firebase project and add Firebase from the repo root:
+   ```bash
+   ./scripts/setup-firebase-project.sh lexicon-learner-pal "Lexicon Learner"
+   ```
+   This creates the GCP project, enables the Firebase Management API (so `addFirebase` doesn’t 403), adds Firebase, and writes `.firebaserc`. Project ID must be **lowercase** with only letters, numbers, and hyphens.
+4. Deploy:
+   ```bash
+   firebase use staging
+   make deploy-staging
+   ```
+
+**Reusing an existing project:** Run `firebase projects:list`, pick an ID, then:
+`gcloud services enable firebase.googleapis.com --project=YOUR_ID` and `firebase projects:addfirebase YOUR_ID`. Edit `.firebaserc` so `default`/`staging`/`prod` point to that ID.
+
+**If `addFirebase` still returns 403:** Add Firebase once in the [Firebase console](https://console.firebase.google.com/) (Add project → Add Firebase to an existing Google Cloud project → select your project). Then deploy from the repo as above.
 
 ### Deploy commands (from repo root)
 
@@ -86,6 +122,22 @@ The only time a browser opens is for `firebase login` (Google OAuth). Everything
 | `make deploy-prod` | Build and deploy web to Firebase Hosting (prod) |
 
 Or run the script directly: `./scripts/deploy-all.sh staging` or `./scripts/deploy-all.sh prod`.
+
+### GitHub Actions
+
+A workflow in `.github/workflows/deploy.yml` deploys to Firebase Hosting:
+
+- **Push to `main`** → deploy to **staging**
+- **Actions → Deploy to Firebase Hosting → Run workflow** → choose **staging** or **prod**
+- **Publish a release** → deploy to **prod**
+
+**One-time setup:** Add a repo secret `FIREBASE_TOKEN` so the workflow can deploy. Locally run:
+
+```bash
+npx firebase login:ci
+```
+
+Then in GitHub: **Settings → Secrets and variables → Actions → New repository secret** → name `FIREBASE_TOKEN`, value = the token from the command.
 
 ### Enabling the backend later (Phase 1)
 
