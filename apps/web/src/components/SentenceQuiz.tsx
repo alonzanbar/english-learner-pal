@@ -41,7 +41,7 @@ const SentenceQuiz = ({ word, onAnswer }: SentenceQuizProps) => {
     <div className="flex flex-col items-center gap-8 animate-slide-up">
       {/* Sentence with blank */}
       <div className="bg-card rounded-2xl border-2 border-border shadow-lg px-8 py-8 text-center max-w-xl w-full">
-        <span className="text-xs uppercase tracking-widest text-muted-foreground mb-4 block">השלם את המשפט</span>
+        <span className="text-xs uppercase tracking-widest text-muted-foreground mb-4 block">Complete the sentence</span>
         <p className="text-xl leading-relaxed text-foreground" dir="ltr">
           {parts[0]}
           <span className="inline-block mx-1 px-4 py-1 rounded-lg bg-primary/10 border-2 border-dashed border-primary min-w-[100px] text-center">

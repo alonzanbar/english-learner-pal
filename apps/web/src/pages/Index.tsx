@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo } from "react";
-import { getAllWords, getWordsBySublist, getSublists, shuffleArray, Word } from "@/lib/vocabulary";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { getAllWords, getWordsBySublist, getSublists, shuffleArray, ensureWordsLoaded, Word } from "@/lib/vocabulary";
 import { getWordsWithSentences } from "@/lib/sentences";
 import { useKnownWords } from "@/hooks/use-known-words";
 import Flashcard from "@/components/Flashcard";
@@ -23,6 +23,8 @@ import {
 type Mode = "flashcards" | "quiz" | "sentences" | "list";
 
 const Index = () => {
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("flashcards");
   const [selectedSublist, setSelectedSublist] = useState<number>(0); // 0 = all
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -32,7 +34,16 @@ const Index = () => {
   const [hideKnown, setHideKnown] = useState(true);
   const { knownWords, toggleKnown, resetKnown, isKnown, knownCount } = useKnownWords();
 
-  const sublists = useMemo(() => getSublists(), []);
+  useEffect(() => {
+    ensureWordsLoaded()
+      .then(() => setLoadState("ready"))
+      .catch((err) => {
+        setLoadState("error");
+        setLoadError(err?.message ?? "Failed to load word list");
+      });
+  }, []);
+
+  const sublists = useMemo(() => getSublists(), [loadState]);
 
   const baseWords = useMemo(() => {
     return selectedSublist === 0 ? getAllWords() : getWordsBySublist(selectedSublist);
@@ -95,11 +106,26 @@ const Index = () => {
   };
 
   const modes: { key: Mode; label: string; icon: React.ReactNode }[] = [
-    { key: "flashcards", label: "כרטיסיות", icon: <BookOpen size={18} /> },
-    { key: "quiz", label: "בוחן", icon: <Brain size={18} /> },
-    { key: "sentences", label: "משפטים", icon: <MessageSquare size={18} /> },
-    { key: "list", label: "רשימה", icon: <List size={18} /> },
+    { key: "flashcards", label: "Flashcards", icon: <BookOpen size={18} /> },
+    { key: "quiz", label: "Quiz", icon: <Brain size={18} /> },
+    { key: "sentences", label: "Sentences", icon: <MessageSquare size={18} /> },
+    { key: "list", label: "List", icon: <List size={18} /> },
   ];
+
+  if (loadState === "loading") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
+        <p className="text-muted-foreground">Loading word list...</p>
+      </div>
+    );
+  }
+  if (loadState === "error") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
+        <p className="text-destructive">{loadError}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -111,8 +137,8 @@ const Index = () => {
               <BookOpen size={16} className="text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-sm sm:text-lg font-bold text-foreground leading-tight">אוצר מילים אקדמי</h1>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">AWL – {words.length} מילים</p>
+              <h1 className="text-sm sm:text-lg font-bold text-foreground leading-tight">Academic Word List</h1>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">AWL – {words.length} words</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -141,11 +167,11 @@ const Index = () => {
               value={String(selectedSublist)}
               onValueChange={(v) => handleSublistChange(Number(v))}
             >
-              <SelectTrigger className="w-[72px] h-8 text-xs" aria-label="רשימה">
-                <SelectValue placeholder="רשימה" />
+              <SelectTrigger className="w-[72px] h-8 text-xs" aria-label="Sublist">
+                <SelectValue placeholder="Sublist" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="0">הכל</SelectItem>
+                <SelectItem value="0">All</SelectItem>
                 {sublists.map((s) => (
                   <SelectItem key={s} value={String(s)}>
                     {s}
@@ -159,7 +185,7 @@ const Index = () => {
                   <button
                     type="button"
                     onClick={toggleShuffle}
-                    aria-label="ערבב"
+                    aria-label="Shuffle"
                     className={`flex items-center justify-center size-8 rounded-lg text-sm transition-all ${
                       shuffled
                         ? "bg-accent text-accent-foreground"
@@ -169,14 +195,14 @@ const Index = () => {
                     <Shuffle size={14} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">ערבב</TooltipContent>
+                <TooltipContent side="bottom">Shuffle</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
                     onClick={() => setHideKnown(!hideKnown)}
-                    aria-label={hideKnown ? "הסתר ידועות" : "הצג ידועות"}
+                    aria-label={hideKnown ? "Hide known" : "Show known"}
                     className={`flex items-center justify-center size-8 rounded-lg text-sm transition-all ${
                       hideKnown
                         ? "bg-accent text-accent-foreground"
@@ -187,7 +213,7 @@ const Index = () => {
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  {hideKnown ? "הסתר ידועות" : "הצג ידועות"}
+                  {hideKnown ? "Hide known" : "Show known"}
                   {knownCount > 0 && ` (${knownCount})`}
                 </TooltipContent>
               </Tooltip>
@@ -197,13 +223,13 @@ const Index = () => {
                     <button
                       type="button"
                       onClick={resetKnown}
-                      aria-label="אפס ידועות"
+                      aria-label="Reset known"
                       className="flex items-center justify-center size-8 rounded-lg text-sm bg-secondary text-secondary-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
                     >
                       <RotateCcw size={14} />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom">אפס ידועות</TooltipContent>
+                  <TooltipContent side="bottom">Reset known</TooltipContent>
                 </Tooltip>
               )}
             </div>

@@ -42,14 +42,14 @@ const Flashcard = ({ word, onNext, onPrevious, current, total, isKnown, onToggle
           <div className="card-face absolute inset-0 rounded-2xl bg-card border-2 border-border shadow-lg flex flex-col items-center justify-center p-8 hover:shadow-xl transition-shadow">
             <span className="text-xs uppercase tracking-widest text-muted-foreground mb-3">English</span>
             <span className="text-4xl font-bold text-foreground">{word.english}</span>
-            <span className="text-sm text-muted-foreground mt-4">לחץ כדי להפוך</span>
+            <span className="text-sm text-muted-foreground mt-4">Click to flip</span>
           </div>
 
           {/* Back - Hebrew */}
           <div className="card-face card-face-back absolute inset-0 rounded-2xl bg-primary text-primary-foreground shadow-lg flex flex-col items-center justify-center p-8">
-            <span className="text-xs uppercase tracking-widest opacity-70 mb-3">עברית</span>
+            <span className="text-xs uppercase tracking-widest opacity-70 mb-3">Hebrew</span>
             <span className="text-4xl font-bold font-hebrew" dir="rtl">{word.hebrew}</span>
-            <span className="text-sm opacity-70 mt-4">לחץ כדי להפוך</span>
+            <span className="text-sm opacity-70 mt-4">Click to flip</span>
           </div>
         </div>
       </div>
@@ -59,7 +59,7 @@ const Flashcard = ({ word, onNext, onPrevious, current, total, isKnown, onToggle
           onClick={handlePrevious}
           className="px-6 py-3 rounded-xl bg-secondary text-secondary-foreground font-medium hover:opacity-80 transition-opacity"
         >
-          ← הקודם
+          ← Previous
         </button>
         <button
           onClick={onToggleKnown}
@@ -70,13 +70,13 @@ const Flashcard = ({ word, onNext, onPrevious, current, total, isKnown, onToggle
           }`}
         >
           <Check size={16} />
-          {isKnown ? "ידוע" : "סמן כידוע"}
+          {isKnown ? "Known" : "Mark as known"}
         </button>
         <button
           onClick={handleNext}
           className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity"
         >
-          הבא →
+          Next →
         </button>
       </div>
     </div>

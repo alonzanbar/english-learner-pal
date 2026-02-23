@@ -125,19 +125,26 @@ Or run the script directly: `./scripts/deploy-all.sh staging` or `./scripts/depl
 
 ### GitHub Actions
 
-A workflow in `.github/workflows/deploy.yml` deploys to Firebase Hosting:
+**Web (Firebase Hosting)** – `.github/workflows/deploy.yml`:
 
 - **Push to `main`** → deploy to **staging**
 - **Actions → Deploy to Firebase Hosting → Run workflow** → choose **staging** or **prod**
 - **Publish a release** → deploy to **prod**
 
-**One-time setup:** Add a repo secret `FIREBASE_TOKEN` so the workflow can deploy. Locally run:
+**Backend (Cloud Run)** – `.github/workflows/deploy-backend.yml`:
+
+- **Push to `main`** when `apps/backend/**` changes → build Docker image, push to Artifact Registry, deploy to **staging** Cloud Run
+- **Actions → Deploy Backend (Cloud Run) → Run workflow** → choose **staging** or **prod**
+
+**One-time setup (web):** Add a repo secret `FIREBASE_TOKEN` so the workflow can deploy. Locally run:
 
 ```bash
 npx firebase login:ci
 ```
 
 Then in GitHub: **Settings → Secrets and variables → Actions → New repository secret** → name `FIREBASE_TOKEN`, value = the token from the command.
+
+**One-time setup (backend):** Create a GCP service account with roles **Artifact Registry Writer** and **Cloud Run Admin**, download a JSON key, then add repo secret `GCP_SA_KEY` with the JSON contents. Optional: set variables `GCP_PROJECT_ID` and `GCP_REGION` (defaults: `lexicon-learner-pal`, `us-central1`). Ensure Terraform has been applied so the Artifact Registry repo and Cloud Run service exist.
 
 ### Enabling the backend later (Phase 1)
 
