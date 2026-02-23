@@ -22,7 +22,7 @@ const QuizCard = ({ word, onAnswer }: QuizCardProps) => {
   return (
     <div className="flex flex-col items-center gap-8 animate-slide-up">
       <div className="bg-card rounded-2xl border-2 border-border shadow-lg px-12 py-10 text-center">
-        <span className="text-xs uppercase tracking-widest text-muted-foreground mb-2 block">מה התרגום של</span>
+        <span className="text-xs uppercase tracking-widest text-muted-foreground mb-2 block">What is the translation of</span>
         <span className="text-4xl font-bold text-foreground">{word.english}</span>
       </div>
 
