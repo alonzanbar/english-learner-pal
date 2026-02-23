@@ -1,12 +1,13 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { getAllWords, getWordsBySublist, getSublists, shuffleArray, ensureWordsLoaded, Word } from "@/lib/vocabulary";
+import { getAllWords, getWordsBySublist, getSublists, shuffleArray, ensureWordsLoaded, clearWordsCache, Word } from "@/lib/vocabulary";
 import { getWordsWithSentences } from "@/lib/sentences";
 import { useKnownWords } from "@/hooks/use-known-words";
+import { uploadFile } from "@/lib/api";
 import Flashcard from "@/components/Flashcard";
 import QuizCard from "@/components/QuizCard";
 import SentenceQuiz from "@/components/SentenceQuiz";
 import WordList from "@/components/WordList";
-import { BookOpen, Brain, MessageSquare, List, Shuffle, Eye, EyeOff, RotateCcw, Check } from "lucide-react";
+import { BookOpen, Brain, MessageSquare, List, Shuffle, Eye, EyeOff, RotateCcw, Check, PlusCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -19,6 +20,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type Mode = "flashcards" | "quiz" | "sentences" | "list";
 
@@ -32,6 +44,11 @@ const Index = () => {
   const [quizKey, setQuizKey] = useState(0);
   const [shuffled, setShuffled] = useState(false);
   const [hideKnown, setHideKnown] = useState(true);
+  const [addWordsOpen, setAddWordsOpen] = useState(false);
+  const [addWordsTitle, setAddWordsTitle] = useState("");
+  const [addWordsFile, setAddWordsFile] = useState<File | null>(null);
+  const [addWordsStatus, setAddWordsStatus] = useState<"idle" | "uploading" | "error">("idle");
+  const [addWordsError, setAddWordsError] = useState<string | null>(null);
   const { knownWords, toggleKnown, resetKnown, isKnown, knownCount } = useKnownWords();
 
   useEffect(() => {
@@ -47,7 +64,7 @@ const Index = () => {
 
   const baseWords = useMemo(() => {
     return selectedSublist === 0 ? getAllWords() : getWordsBySublist(selectedSublist);
-  }, [selectedSublist]);
+  }, [loadState, selectedSublist]);
 
   const filteredWords = useMemo(() => {
     return hideKnown ? baseWords.filter(w => !knownWords.has(w.english)) : baseWords;
@@ -103,6 +120,37 @@ const Index = () => {
   const toggleShuffle = () => {
     setShuffled(!shuffled);
     setCurrentIndex(0);
+  };
+
+  const handleAddWordsOpen = () => {
+    setAddWordsOpen(true);
+    setAddWordsTitle("");
+    setAddWordsFile(null);
+    setAddWordsStatus("idle");
+    setAddWordsError(null);
+  };
+
+  const handleAddWordsSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addWordsFile) {
+      setAddWordsError("Please select a file.");
+      return;
+    }
+    setAddWordsStatus("uploading");
+    setAddWordsError(null);
+    uploadFile(addWordsFile, addWordsTitle)
+      .then(() => {
+        clearWordsCache();
+        return ensureWordsLoaded();
+      })
+      .then(() => {
+        setLoadState("ready");
+        setAddWordsOpen(false);
+      })
+      .catch((err) => {
+        setAddWordsStatus("error");
+        setAddWordsError(err?.message ?? "Upload failed");
+      });
   };
 
   const modes: { key: Mode; label: string; icon: React.ReactNode }[] = [
@@ -163,6 +211,19 @@ const Index = () => {
                 </Tooltip>
               ))}
             </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={handleAddWordsOpen}
+                  aria-label="Add words"
+                  className="flex items-center justify-center size-8 rounded-lg text-sm bg-secondary text-secondary-foreground hover:bg-primary/10 transition-all"
+                >
+                  <PlusCircle size={18} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Add words</TooltipContent>
+            </Tooltip>
             <Select
               value={String(selectedSublist)}
               onValueChange={(v) => handleSublistChange(Number(v))}
@@ -310,6 +371,55 @@ const Index = () => {
 
         {mode === "list" && <WordList words={hideKnown ? words : baseWords} isKnown={isKnown} onToggleKnown={toggleKnown} />}
       </main>
+
+      <Dialog open={addWordsOpen} onOpenChange={setAddWordsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add words</DialogTitle>
+            <DialogDescription>
+              Upload a CSV or Excel file (.csv, .xlsx, .xls) and give it a title. The file should have word columns (e.g. English, Hebrew).
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddWordsSubmit} className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="add-words-title">Title</Label>
+              <Input
+                id="add-words-title"
+                value={addWordsTitle}
+                onChange={(e) => setAddWordsTitle(e.target.value)}
+                placeholder="My word list"
+                disabled={addWordsStatus === "uploading"}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-words-file">File</Label>
+              <Input
+                id="add-words-file"
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={(e) => setAddWordsFile(e.target.files?.[0] ?? null)}
+                disabled={addWordsStatus === "uploading"}
+              />
+            </div>
+            {addWordsError && (
+              <p className="text-sm text-destructive">{addWordsError}</p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setAddWordsOpen(false)}
+                disabled={addWordsStatus === "uploading"}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={addWordsStatus === "uploading"}>
+                {addWordsStatus === "uploading" ? "Uploading…" : "Upload"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

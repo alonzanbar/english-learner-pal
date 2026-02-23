@@ -9,6 +9,14 @@ resource "google_cloud_run_v2_service" "backend" {
       ports {
         container_port = 8080
       }
+      env {
+        name  = "GCS_BUCKET"
+        value = google_storage_bucket.wordlists.name
+      }
+      env {
+        name  = "FIRESTORE_DATABASE_ID"
+        value = google_firestore_database.wordlist.name
+      }
     }
     scaling {
       min_instance_count = 0
@@ -16,7 +24,11 @@ resource "google_cloud_run_v2_service" "backend" {
     }
   }
 
-  depends_on = [google_project_service.run]
+  depends_on = [
+    google_project_service.run,
+    google_storage_bucket.wordlists,
+    google_firestore_database.wordlist,
+  ]
 }
 
 # Allow unauthenticated invocations (public API for dummy)

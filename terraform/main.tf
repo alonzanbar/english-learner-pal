@@ -31,6 +31,18 @@ resource "google_project_service" "run" {
   disable_on_destroy = false
 }
 
+resource "google_project_service" "storage" {
+  project            = var.project_id
+  service            = "storage.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "firestore" {
+  project            = var.project_id
+  service            = "firestore.googleapis.com"
+  disable_on_destroy = false
+}
+
 # Project number needed to reference the default compute service account
 data "google_project" "current" {
   project_id = var.project_id

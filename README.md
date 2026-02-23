@@ -56,19 +56,42 @@ make dev
 
 **Run locally using the staging API (no local backend)**
 
-If the backend is already deployed to staging (e.g. Cloud Run), you only need to run the frontend and point it at that API:
+If the backend is already deployed to staging (e.g. Cloud Run), run only the frontend and set `VITE_API_URL` to your staging backend URL (no trailing slash):
 
 ```sh
 cd apps/web && npm i
-# Use your staging backend URL (from Terraform: terraform -chdir=terraform output -raw backend_url)
 VITE_API_URL=https://wordlist-backend-staging-XXXXX.run.app npm run dev
 ```
 
-Then open http://localhost:8080. The app will call the staging API. Ensure the staging backend allows CORS from `http://localhost:8080` (e.g. via `ALLOWED_ORIGINS` in Cloud Run).
+Get the URL from Terraform: `terraform -chdir=terraform output -raw backend_url`. Then open http://localhost:8080. Ensure the staging backend allows CORS from `http://localhost:8080` (e.g. `ALLOWED_ORIGINS` in Cloud Run).
 
 **Run locally with a local backend (two terminals)**
 
-Only if you need to run the API on your machine: start the backend first (Terminal 1), then the web app (Terminal 2). See [apps/backend/README.md](apps/backend/README.md). The web app’s dev server proxies `/api` to the backend when `VITE_API_URL` is not set.
+Start the backend first (it defaults to port 3001 so the web app can use 8080), then start the web app. The web app proxies `/api` to the backend when `VITE_API_URL` is not set.
+
+```sh
+# Terminal 1 – backend (default port 3001)
+cd apps/backend && npm i
+export DEFAULT_VOCAB_PATH="$(pwd)/../web/public/data/vocabulary.csv"
+npm run dev
+
+# Terminal 2 – web app
+cd apps/web && npm run dev
+```
+
+Then open http://localhost:8080.
+
+**Still getting 404 on http://localhost:8080?**
+
+1. **Using the staging API:** Create `apps/web/.env` with one line (use your real staging URL):
+   ```bash
+   echo "VITE_API_URL=https://YOUR-STAGING-URL.run.app" > apps/web/.env
+   ```
+   Then run `make dev` from the repo root. Get the URL with `terraform -chdir=terraform output -raw backend_url`.
+
+2. **Nothing on 8080:** If the backend was previously using port 8080, stop it. Only the web app should use 8080. The backend now defaults to 3001.
+
+3. **Page loads but shows "Failed to load word list":** The API request failed. With staging, set `VITE_API_URL` in `apps/web/.env` as above. With a local backend, start the backend first (Terminal 1), then run `make dev` (Terminal 2).
 
 **Edit a file directly in GitHub**
 
