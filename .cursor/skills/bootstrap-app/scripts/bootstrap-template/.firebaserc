@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "__PROJECT_ID__",
+    "staging": "__PROJECT_ID__",
+    "prod": "__PROJECT_ID__"
+  }
+}

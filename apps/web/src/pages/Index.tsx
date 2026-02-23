@@ -7,6 +7,18 @@ import QuizCard from "@/components/QuizCard";
 import SentenceQuiz from "@/components/SentenceQuiz";
 import WordList from "@/components/WordList";
 import { BookOpen, Brain, MessageSquare, List, Shuffle, Eye, EyeOff, RotateCcw, Check } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Mode = "flashcards" | "quiz" | "sentences" | "list";
 
@@ -91,104 +103,113 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      {/* Header */}
+      {/* Single header row: title + word count | mode icons + sublist + actions */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+        <div className="container max-w-4xl mx-auto px-3 sm:px-4 py-2 flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary flex items-center justify-center">
-              <BookOpen size={18} className="text-primary-foreground" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-primary flex items-center justify-center">
+              <BookOpen size={16} className="text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-base sm:text-xl font-bold text-foreground leading-tight">אוצר מילים אקדמי</h1>
+              <h1 className="text-sm sm:text-lg font-bold text-foreground leading-tight">אוצר מילים אקדמי</h1>
               <p className="text-[10px] sm:text-xs text-muted-foreground">AWL – {words.length} מילים</p>
             </div>
           </div>
-        </div>
-
-        {/* Mode Switcher - separate row on mobile */}
-        <div className="container max-w-4xl mx-auto px-3 pb-2">
-          <div className="flex gap-1 bg-secondary rounded-xl p-1 overflow-x-auto">
-            {modes.map((m) => (
-              <button
-                key={m.key}
-                onClick={() => handleModeChange(m.key)}
-                className={`flex items-center gap-1 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
-                  mode === m.key
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {m.icon}
-                {m.label}
-              </button>
-            ))}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex gap-0.5 bg-secondary rounded-lg p-0.5">
+              {modes.map((m) => (
+                <Tooltip key={m.key}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => handleModeChange(m.key)}
+                      aria-label={m.label}
+                      className={`flex items-center justify-center size-8 rounded-md shrink-0 transition-all ${
+                        mode === m.key
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {m.icon}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">{m.label}</TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+            <Select
+              value={String(selectedSublist)}
+              onValueChange={(v) => handleSublistChange(Number(v))}
+            >
+              <SelectTrigger className="w-[72px] h-8 text-xs" aria-label="רשימה">
+                <SelectValue placeholder="רשימה" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">הכל</SelectItem>
+                {sublists.map((s) => (
+                  <SelectItem key={s} value={String(s)}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-0.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={toggleShuffle}
+                    aria-label="ערבב"
+                    className={`flex items-center justify-center size-8 rounded-lg text-sm transition-all ${
+                      shuffled
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-secondary text-secondary-foreground hover:bg-primary/10"
+                    }`}
+                  >
+                    <Shuffle size={14} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">ערבב</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setHideKnown(!hideKnown)}
+                    aria-label={hideKnown ? "הסתר ידועות" : "הצג ידועות"}
+                    className={`flex items-center justify-center size-8 rounded-lg text-sm transition-all ${
+                      hideKnown
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-secondary text-secondary-foreground hover:bg-primary/10"
+                    }`}
+                  >
+                    {hideKnown ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  {hideKnown ? "הסתר ידועות" : "הצג ידועות"}
+                  {knownCount > 0 && ` (${knownCount})`}
+                </TooltipContent>
+              </Tooltip>
+              {knownCount > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={resetKnown}
+                      aria-label="אפס ידועות"
+                      className="flex items-center justify-center size-8 rounded-lg text-sm bg-secondary text-secondary-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+                    >
+                      <RotateCcw size={14} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">אפס ידועות</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
           </div>
         </div>
       </header>
-
-      {/* Filters */}
-      <div className="container max-w-4xl mx-auto px-3 sm:px-4 py-3">
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <span className="text-xs sm:text-sm font-medium text-muted-foreground">רשימה:</span>
-          <button
-            onClick={() => handleSublistChange(0)}
-            className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-              selectedSublist === 0
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground hover:bg-primary/10"
-            }`}
-          >
-            הכל
-          </button>
-          {sublists.map((s) => (
-            <button
-              key={s}
-              onClick={() => handleSublistChange(s)}
-              className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                selectedSublist === s
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-secondary-foreground hover:bg-primary/10"
-              }`}
-            >
-              {s}
-            </button>
-          ))}
-          
-          <div className="mr-auto flex items-center gap-1.5">
-            <button
-              onClick={toggleShuffle}
-              className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                shuffled
-                  ? "bg-accent text-accent-foreground"
-                  : "bg-secondary text-secondary-foreground hover:bg-primary/10"
-              }`}
-            >
-              <Shuffle size={14} />
-              ערבב
-            </button>
-            <button
-              onClick={() => setHideKnown(!hideKnown)}
-              className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                hideKnown
-                  ? "bg-accent text-accent-foreground"
-                  : "bg-secondary text-secondary-foreground hover:bg-primary/10"
-              }`}
-            >
-              {hideKnown ? <EyeOff size={14} /> : <Eye size={14} />}
-              הסתר ידועות {knownCount > 0 && `(${knownCount})`}
-            </button>
-            {knownCount > 0 && (
-              <button
-                onClick={resetKnown}
-                className="flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-secondary text-secondary-foreground hover:bg-destructive/10 hover:text-destructive"
-              >
-                <RotateCcw size={14} />
-                אפס
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
 
       {/* Content */}
       <main className="container max-w-4xl mx-auto px-4 py-6">
