@@ -20,3 +20,9 @@ variable "environment" {
   type        = string
   default     = "staging"
 }
+
+variable "deployer_sa_email" {
+  description = "Service account email used by CI to deploy (e.g. github-actions-backend@PROJECT_ID.iam.gserviceaccount.com). When set, grants this SA roles/iam.serviceAccountUser on the default compute SA so gcloud run deploy can act as it."
+  type        = string
+  default     = ""
+}
