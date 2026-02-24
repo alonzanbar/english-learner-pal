@@ -1,8 +1,11 @@
 # Deploy web app to Firebase Hosting (staging or prod).
+# API calls use relative /api/*; Hosting rewrites them to Cloud Run (no CORS, no BACKEND_URL_* needed).
 #
 # Required secret: FIREBASE_TOKEN
 #   Get it: npx firebase login:ci
 #   Add: repo Settings → Secrets and variables → Actions → New repository secret
+#
+# Optional variable: GCP_REGION (default us-central1) — must match Cloud Run region for /api/** rewrite.
 #
 # Triggers:
 #   - Push to main → deploy to staging
@@ -55,34 +58,36 @@ jobs:
           cache: 'npm'
           cache-dependency-path: apps/web/package-lock.json
 
-      - name: Set backend URL for build
-        id: api_url
-        run: |
-          if [[ "${{ steps.env.outputs.environment }}" == "staging" ]]; then
-            echo "url=${{ vars.BACKEND_URL_STAGING }}" >> $GITHUB_OUTPUT
-          else
-            echo "url=${{ vars.BACKEND_URL_PROD }}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Require backend URL (Firebase app must call Cloud Run)
-        run: |
-          URL="${{ steps.api_url.outputs.url }}"
-          if [[ -z "$URL" ]]; then
-            echo "::error::Set repo variable BACKEND_URL_STAGING (and BACKEND_URL_PROD for prod). See README."
-            exit 1
-          fi
-          echo "Building with VITE_API_URL=$URL"
-
       - name: Install dependencies and build
         run: |
           cd apps/web
           npm ci
           npm run build
-        env:
-          VITE_API_URL: ${{ steps.api_url.outputs.url }}
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
+
+      - name: Generate firebase.json with API rewrite
+        run: |
+          node -e "
+          const env = process.env.DEPLOY_ENV;
+          const region = process.env.GCP_REGION;
+          const config = {
+            hosting: {
+              public: 'apps/web/dist',
+              ignore: ['firebase.json', '**/.*', '**/node_modules/**'],
+              rewrites: [
+                { source: '/api/**', run: { serviceId: 'wordlist-backend-' + env, region } },
+                { source: '**', destination: '/index.html' }
+              ]
+            }
+          };
+          require('fs').writeFileSync('firebase.json', JSON.stringify(config, null, 2));
+          console.log('firebase.json: /api/** -> Cloud Run wordlist-backend-' + env + ' (' + region + ')');
+          "
+        env:
+          DEPLOY_ENV: ${{ steps.env.outputs.environment }}
+          GCP_REGION: ${{ vars.GCP_REGION || 'us-central1' }}
 
       - name: Deploy to Firebase Hosting
         run: |
