@@ -8,6 +8,9 @@
 #   Create in GCP Console → IAM → Service accounts → Keys, then add as repo secret.
 #
 # Optional variables (Settings → Actions → Variables): GCP_PROJECT_ID, GCP_REGION
+#
+# After deploy, the workflow sets the repo variable BACKEND_URL_<ENVIRONMENT> to the
+# Cloud Run URL so the Firebase web deploy (and Terraform, if you use it) stays in sync.
 
 name: Deploy Backend (Cloud Run)
 
@@ -34,6 +37,9 @@ env:
 jobs:
   deploy-backend:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write  # so we can set BACKEND_URL_* for the web deploy
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -66,6 +72,7 @@ jobs:
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
       - name: Deploy to Cloud Run
+        id: deploy
         run: |
           gcloud run deploy "wordlist-backend-${{ steps.env.outputs.environment }}" \
             --image "${{ env.IMAGE }}" \
@@ -73,4 +80,17 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --quiet
-          echo "Backend URL: $(gcloud run services describe wordlist-backend-${{ steps.env.outputs.environment }} --region ${{ env.GCP_REGION }} --format 'value(status.url)')"
+          BACKEND_URL=$(gcloud run services describe "wordlist-backend-${{ steps.env.outputs.environment }}" \
+            --region "${{ env.GCP_REGION }}" \
+            --format 'value(status.url)')
+          echo "url=$BACKEND_URL" >> $GITHUB_OUTPUT
+          echo "Backend URL: $BACKEND_URL"
+
+      - name: Set GitHub Actions variable for web deploy
+        run: |
+          ENV="${{ steps.env.outputs.environment }}"
+          VAR_NAME="BACKEND_URL_$(echo "$ENV" | tr '[:lower:]' '[:upper:]')"
+          echo "Setting $VAR_NAME to ${{ steps.deploy.outputs.url }}"
+          gh variable set "$VAR_NAME" --body "${{ steps.deploy.outputs.url }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

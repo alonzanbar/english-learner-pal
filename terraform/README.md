@@ -57,6 +57,21 @@ terraform apply -var="project_id=YOUR_PROJECT_ID" -var="deployer_sa_email=github
 
 Terraform will grant that service account `roles/iam.serviceAccountUser` on the project’s default compute service account so `gcloud run deploy` can succeed in CI.
 
+### Terraform-managed GitHub Actions variable (backend URL for web deploy)
+
+To have Terraform set the GitHub Actions variable `BACKEND_URL_STAGING` (or `BACKEND_URL_PROD`) to the Cloud Run URL so the Firebase web deploy builds with `VITE_API_URL`:
+
+1. Create a GitHub token (Settings → Developer settings → Personal access tokens) with scope `repo` (or fine-grained with Actions variables write).
+2. Run apply with the repo name and token:
+
+```bash
+export GITHUB_TOKEN=ghp_xxxx
+terraform apply -var="project_id=lexicon-learner-pal" \
+  -var="github_repository=YOUR_GITHUB_USERNAME/lexicon-learner-pal"
+```
+
+Terraform will create or update the variable `BACKEND_URL_<ENVIRONMENT>` (e.g. `BACKEND_URL_STAGING`) with the Cloud Run service URI. The "Deploy to Firebase Hosting" workflow reads this variable and passes it as `VITE_API_URL` when building the web app. Omit `github_repository` (or leave it empty) to skip managing the variable.
+
 ## Outputs
 
 - `backend_url` – Cloud Run service URL (use as `VITE_API_URL` in the frontend for that environment)

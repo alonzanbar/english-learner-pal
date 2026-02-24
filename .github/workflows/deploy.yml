@@ -64,6 +64,15 @@ jobs:
             echo "url=${{ vars.BACKEND_URL_PROD }}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Require backend URL (Firebase app must call Cloud Run)
+        run: |
+          URL="${{ steps.api_url.outputs.url }}"
+          if [[ -z "$URL" ]]; then
+            echo "::error::Set repo variable BACKEND_URL_STAGING (and BACKEND_URL_PROD for prod). See README."
+            exit 1
+          fi
+          echo "Building with VITE_API_URL=$URL"
+
       - name: Install dependencies and build
         run: |
           cd apps/web
