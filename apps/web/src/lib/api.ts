@@ -25,6 +25,8 @@ export async function listFiles(): Promise<FileMeta[]> {
   return data;
 }
 
+export type { FileMeta };
+
 export async function getWords(fileId: string): Promise<Word[]> {
   const base = getBase();
   const url = base

@@ -1,8 +1,8 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { getAllWords, getWordsBySublist, getSublists, shuffleArray, ensureWordsLoaded, clearWordsCache, Word } from "@/lib/vocabulary";
+import { getAllWords, getWordsBySublist, getSublists, shuffleArray, ensureWordsLoaded, clearWordsCache, loadWordsForFile, Word } from "@/lib/vocabulary";
 import { getWordsWithSentences } from "@/lib/sentences";
 import { useKnownWords } from "@/hooks/use-known-words";
-import { uploadFile } from "@/lib/api";
+import { uploadFile, listFiles, type FileMeta } from "@/lib/api";
 import Flashcard from "@/components/Flashcard";
 import QuizCard from "@/components/QuizCard";
 import SentenceQuiz from "@/components/SentenceQuiz";
@@ -49,10 +49,18 @@ const Index = () => {
   const [addWordsFile, setAddWordsFile] = useState<File | null>(null);
   const [addWordsStatus, setAddWordsStatus] = useState<"idle" | "uploading" | "error">("idle");
   const [addWordsError, setAddWordsError] = useState<string | null>(null);
+  const [fileList, setFileList] = useState<FileMeta[]>([]);
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const { knownWords, toggleKnown, resetKnown, isKnown, knownCount } = useKnownWords();
 
   useEffect(() => {
-    ensureWordsLoaded()
+    listFiles()
+      .then((files) => {
+        setFileList(files);
+        const firstId = files[0]?.id ?? null;
+        setSelectedFileId(firstId);
+        return firstId ? loadWordsForFile(firstId) : ensureWordsLoaded();
+      })
       .then(() => setLoadState("ready"))
       .catch((err) => {
         setLoadState("error");
@@ -141,7 +149,13 @@ const Index = () => {
     uploadFile(addWordsFile, addWordsTitle)
       .then(() => {
         clearWordsCache();
-        return ensureWordsLoaded();
+        return listFiles();
+      })
+      .then((files) => {
+        setFileList(files);
+        const firstId = files[0]?.id ?? null;
+        setSelectedFileId(firstId);
+        return firstId ? loadWordsForFile(firstId) : Promise.resolve([]);
       })
       .then(() => {
         setLoadState("ready");
@@ -150,6 +164,17 @@ const Index = () => {
       .catch((err) => {
         setAddWordsStatus("error");
         setAddWordsError(err?.message ?? "Upload failed");
+      });
+  };
+
+  const handleFileListChange = (fileId: string) => {
+    setSelectedFileId(fileId);
+    setLoadState("loading");
+    loadWordsForFile(fileId)
+      .then(() => setLoadState("ready"))
+      .catch((err) => {
+        setLoadState("error");
+        setLoadError(err?.message ?? "Failed to load words");
       });
   };
 
@@ -188,6 +213,23 @@ const Index = () => {
               <h1 className="text-sm sm:text-lg font-bold text-foreground leading-tight">Academic Word List</h1>
               <p className="text-[10px] sm:text-xs text-muted-foreground">AWL – {words.length} words</p>
             </div>
+            {fileList.length > 0 && (
+              <Select
+                value={selectedFileId ?? ""}
+                onValueChange={handleFileListChange}
+              >
+                <SelectTrigger className="w-[140px] sm:w-[180px] h-8 text-xs" aria-label="Word list">
+                  <SelectValue placeholder="Word list" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fileList.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <div className="flex gap-0.5 bg-secondary rounded-lg p-0.5">
