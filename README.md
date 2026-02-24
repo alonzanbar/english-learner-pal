@@ -175,13 +175,13 @@ Or run the script directly: `./scripts/deploy-all.sh staging` or `./scripts/depl
 - **Push to `main`** when `apps/backend/**` changes → build Docker image, push to Artifact Registry, deploy to **staging** Cloud Run
 - **Actions → Deploy Backend (Cloud Run) → Run workflow** → choose **staging** or **prod**
 
-**One-time setup (web):** Add a repo secret `FIREBASE_TOKEN` so the workflow can deploy. Locally run:
+**One-time setup (web):** Add a repo secret `FIREBASE_TOKEN` and **variables** so the deployed app calls the backend:
 
-```bash
-npx firebase login:ci
-```
+1. **FIREBASE_TOKEN** (secret): Run `npx firebase login:ci`, then **Settings → Secrets and variables → Actions → New repository secret** → name `FIREBASE_TOKEN`, value = the token.
+2. **BACKEND_URL_STAGING** (variable): Set in GitHub **Settings → Secrets and variables → Actions → Variables**, or let **Terraform** manage it: run `terraform apply -var="github_repository=owner/repo"` with `GITHUB_TOKEN` set (see [terraform/README.md](terraform/README.md)). Terraform will set `BACKEND_URL_STAGING` (or `BACKEND_URL_PROD`) to the Cloud Run URL.
+3. **BACKEND_URL_PROD** (variable): Same, for prod; or run Terraform with `environment=prod` to set it.
 
-Then in GitHub: **Settings → Secrets and variables → Actions → New repository secret** → name `FIREBASE_TOKEN`, value = the token from the command.
+Without these variables, the web deploy workflow will fail so the app is never deployed without an API URL (which would cause /api/files to return HTML from Firebase).
 
 **One-time setup (backend):** Create a GCP service account with roles **Artifact Registry Writer** and **Cloud Run Admin**, download a JSON key, then add repo secret `GCP_SA_KEY` with the JSON contents. Optional: set variables `GCP_PROJECT_ID` and `GCP_REGION` (defaults: `lexicon-learner-pal`, `us-central1`). Ensure Terraform has been applied so the Artifact Registry repo and Cloud Run service exist.
 

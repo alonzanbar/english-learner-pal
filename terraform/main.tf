@@ -5,6 +5,10 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 5.0"
     }
+    github = {
+      source  = "integrations/github"
+      version = "~> 6.0"
+    }
   }
   # Optional: remote state in GCS for team/CI
   # backend "gcs" {

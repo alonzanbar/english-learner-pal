@@ -26,3 +26,16 @@ variable "deployer_sa_email" {
   type        = string
   default     = ""
 }
+
+variable "github_repository" {
+  description = "GitHub repo in form owner/name (e.g. alonzanbar/lexicon-learner-pal). When set, Terraform will set the Actions variable BACKEND_URL_<ENVIRONMENT> to the Cloud Run URL so the web deploy uses it."
+  type        = string
+  default     = ""
+}
+
+variable "github_token" {
+  description = "GitHub token (PAT) with repo scope so Terraform can set Actions variables. Prefer env var GITHUB_TOKEN instead of passing here."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
