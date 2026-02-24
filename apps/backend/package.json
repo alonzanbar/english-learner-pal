@@ -1,7 +1,7 @@
 {
   "name": "wordlist-backend",
   "version": "0.1.0",
-  "description": "Word-list API: default vocabulary + GCS/Firestore uploads",
+  "description": "Word-list API: GCS/Firestore uploads only",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

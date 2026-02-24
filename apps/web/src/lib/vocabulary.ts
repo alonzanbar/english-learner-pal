@@ -39,7 +39,7 @@ export function loadWordsForFile(fileId: string): Promise<Word[]> {
   return _loadPromise;
 }
 
-/** Fetch /api/files, take first file, load its words, cache and return. On failure, use fallback so the app works locally. */
+/** Fetch /api/files, take first file, load its words, cache and return. Empty list => []. On API failure, use fallback. */
 export function ensureWordsLoaded(): Promise<Word[]> {
   if (_words) return Promise.resolve(_words);
   if (_loadPromise) return _loadPromise;
@@ -47,7 +47,10 @@ export function ensureWordsLoaded(): Promise<Word[]> {
     try {
       const files = await listFiles();
       const first = files[0];
-      if (!first) return FALLBACK_WORDS;
+      if (!first) {
+        _words = [];
+        return _words;
+      }
       const words = await getWords(first.id);
       _words = words.length ? words : FALLBACK_WORDS;
       return _words;
