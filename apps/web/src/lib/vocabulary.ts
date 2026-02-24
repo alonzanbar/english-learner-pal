@@ -16,13 +16,30 @@ const FALLBACK_WORDS: Word[] = [
   { english: "word", hebrew: "מילה", sublist: 1 },
 ];
 
-/** Clear cached words so the next ensureWordsLoaded() refetches from the API. */
+/** Clear cached words so the next ensureWordsLoaded() or loadWordsForFile() refetches from the API. */
 export function clearWordsCache(): void {
   _words = null;
   _loadPromise = null;
 }
 
-/** Fetch /api/files, take first file, load its words, cache and return. On failure, use fallback so the app works locally. */
+/** Load words for a specific file id from the server and cache them. */
+export function loadWordsForFile(fileId: string): Promise<Word[]> {
+  _words = null;
+  _loadPromise = null;
+  _loadPromise = (async () => {
+    try {
+      const words = await getWords(fileId);
+      _words = words.length ? words : FALLBACK_WORDS;
+      return _words;
+    } catch {
+      _words = FALLBACK_WORDS;
+      return _words;
+    }
+  })();
+  return _loadPromise;
+}
+
+/** Fetch /api/files, take first file, load its words, cache and return. Empty list => []. On API failure, use fallback. */
 export function ensureWordsLoaded(): Promise<Word[]> {
   if (_words) return Promise.resolve(_words);
   if (_loadPromise) return _loadPromise;
@@ -30,7 +47,10 @@ export function ensureWordsLoaded(): Promise<Word[]> {
     try {
       const files = await listFiles();
       const first = files[0];
-      if (!first) return FALLBACK_WORDS;
+      if (!first) {
+        _words = [];
+        return _words;
+      }
       const words = await getWords(first.id);
       _words = words.length ? words : FALLBACK_WORDS;
       return _words;

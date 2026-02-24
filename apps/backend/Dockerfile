@@ -6,7 +6,6 @@ COPY apps/backend/package.json ./
 RUN npm install --omit=dev
 
 COPY apps/backend/src ./src
-COPY apps/web/public/data/vocabulary.csv ./data/vocabulary.csv
 
 ENV PORT=8080
 EXPOSE 8080

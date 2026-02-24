@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const express = require('express');
 const multer = require('multer');
 const { Storage } = require('@google-cloud/storage');
@@ -9,18 +7,8 @@ const { parseCSVToWords, validateCSVHasRows } = require('../lib/csv.js');
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-const DEFAULT_FILE_ID = 'default';
-const DEFAULT_FILE_NAME = 'Default (AWL)';
 const FIRESTORE_COLLECTION = 'wordlist_files';
 const GCS_PREFIX = 'wordlists';
-
-/** Resolve path to vocabulary.csv (in data/ at app root, or from env). */
-function getDefaultVocabPath() {
-  if (process.env.DEFAULT_VOCAB_PATH) {
-    return process.env.DEFAULT_VOCAB_PATH;
-  }
-  return path.join(__dirname, '..', '..', 'data', 'vocabulary.csv');
-}
 
 /** Lazy GCS bucket client; null if GCS_BUCKET not set. */
 let _storage = null;
@@ -43,12 +31,10 @@ function getFirestore() {
   return _firestore;
 }
 
-/** GET /api/files - ListFilesResponse: default file + all from Firestore when GCS_BUCKET set. */
+/** GET /api/files - ListFilesResponse: only uploaded files from Firestore. */
 router.get('/', async (req, res) => {
   const { bucket } = getBucket();
-  const list = [
-    { id: DEFAULT_FILE_ID, name: DEFAULT_FILE_NAME, createdAt: new Date().toISOString() },
-  ];
+  const list = [];
   if (bucket) {
     try {
       const db = getFirestore();
@@ -63,29 +49,14 @@ router.get('/', async (req, res) => {
       });
     } catch (err) {
       console.error('Firestore list error:', err.message);
-      // still return default
     }
   }
   res.json(list);
 });
 
-/** GET /api/files/:id/words - GetWordsResponse: from default file or GCS. */
+/** GET /api/files/:id/words - GetWordsResponse: from GCS (Firestore metadata). */
 router.get('/:id/words', async (req, res) => {
   const id = req.params.id;
-  if (id === DEFAULT_FILE_ID) {
-    const csvPath = getDefaultVocabPath();
-    if (!fs.existsSync(csvPath)) {
-      return res.status(500).json({ error: 'InternalServerError', message: 'Default vocabulary file not found' });
-    }
-    try {
-      const raw = fs.readFileSync(csvPath, 'utf-8');
-      const words = parseCSVToWords(raw);
-      return res.json(words);
-    } catch (err) {
-      return res.status(500).json({ error: 'InternalServerError', message: err.message });
-    }
-  }
-
   const { bucket } = getBucket();
   if (!bucket) {
     return res.status(404).json({ error: 'NotFound', message: 'File not found' });
@@ -121,11 +92,7 @@ router.post('/', upload.single('file'), async (req, res) => {
 
   const { bucket } = getBucket();
   if (!bucket) {
-    return res.status(201).json({
-      id: DEFAULT_FILE_ID,
-      name: name || 'Uploaded',
-      createdAt: new Date().toISOString(),
-    });
+    return res.status(503).json({ error: 'ServiceUnavailable', message: 'Upload not configured' });
   }
 
   const id = require('crypto').randomUUID();
