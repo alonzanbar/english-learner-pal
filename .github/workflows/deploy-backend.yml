@@ -87,10 +87,21 @@ jobs:
           echo "Backend URL: $BACKEND_URL"
 
       - name: Set GitHub Actions variable for web deploy
+        continue-on-error: true
+        id: set_var
         run: |
           ENV="${{ steps.env.outputs.environment }}"
           VAR_NAME="BACKEND_URL_$(echo "$ENV" | tr '[:lower:]' '[:upper:]')"
-          echo "Setting $VAR_NAME to ${{ steps.deploy.outputs.url }}"
-          gh variable set "$VAR_NAME" --body "${{ steps.deploy.outputs.url }}"
+          URL="${{ steps.deploy.outputs.url }}"
+          echo "Setting $VAR_NAME to $URL"
+          gh variable set "$VAR_NAME" --body "$URL" && echo "OK" || echo "FAILED"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Warn if variable was not set
+        if: steps.set_var.outcome == 'failure'
+        run: |
+          ENV="${{ steps.env.outputs.environment }}"
+          VAR_NAME="BACKEND_URL_$(echo "$ENV" | tr '[:lower:]' '[:upper:]')"
+          echo "::warning::Could not set $VAR_NAME. Check Settings → Actions → General → Workflow permissions (Read and write). Set manually: Settings → Secrets and variables → Actions → Variables → New variable: $VAR_NAME = ${{ steps.deploy.outputs.url }}"
+          echo "Backend URL to copy: ${{ steps.deploy.outputs.url }}"
