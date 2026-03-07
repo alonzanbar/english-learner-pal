@@ -5,6 +5,15 @@ import { getWordsWithSentences } from "@/lib/sentences";
 import { useKnownWords } from "@/hooks/use-known-words";
 import { listFiles } from "@/lib/api";
 import { clearSelectedWordListId, getSelectedWordListId } from "@/lib/word-list-persistence";
+import { getTargetPlan, clearTargetPlan } from "@/lib/target-plan-persistence";
+import {
+  getDayIndex,
+  getWordsForDay,
+  getWeekLabel,
+  isPlanActive,
+  isPlanNotStarted,
+  isPlanEnded,
+} from "@/lib/target-plan-logic";
 import Flashcard from "@/components/Flashcard";
 import QuizCard from "@/components/QuizCard";
 import SentenceQuiz from "@/components/SentenceQuiz";
@@ -29,11 +38,12 @@ export default function Learn() {
   const [shuffled, setShuffled] = useState(false);
   const [hideKnown, setHideKnown] = useState(true);
   const [wordListName, setWordListName] = useState<string>("Word list");
+  const [plan, setPlan] = useState<ReturnType<typeof getTargetPlan>>(getTargetPlan);
   const { knownWords, toggleKnown, resetKnown, isKnown, knownCount } = useKnownWords();
 
   useEffect(() => {
     (async () => {
-      const selectedId = getSelectedWordListId();
+      const selectedId = plan?.fileId ?? getSelectedWordListId();
       if (!selectedId) {
         navigate("/", { replace: true });
         return;
@@ -48,6 +58,7 @@ export default function Learn() {
           const match = files.find((f) => f.id === selectedId);
           if (!match) {
             clearSelectedWordListId();
+            clearTargetPlan();
             clearWordsCache();
             navigate("/", { replace: true });
             return;
@@ -64,13 +75,23 @@ export default function Learn() {
         setLoadError((err as { message?: string })?.message ?? "Failed to load words");
       }
     })();
-  }, [navigate]);
+  }, [navigate, plan?.fileId]);
 
   const sublists = useMemo(() => getSublists(), [loadState]);
 
+  const today = useMemo(() => new Date(), [loadState]);
+  const planActive = plan && isPlanActive(plan, today);
+  const planNotStarted = plan && isPlanNotStarted(plan, today);
+  const planEnded = plan && isPlanEnded(plan, today);
+  const dayIndex = plan && plan.days >= 1 ? getDayIndex(plan, today) : 0;
+
   const baseWords = useMemo(() => {
+    if (planActive && plan && dayIndex >= 1 && dayIndex <= plan.days) {
+      const all = getAllWords();
+      return getWordsForDay(all, plan, dayIndex);
+    }
     return selectedSublist === 0 ? getAllWords() : getWordsBySublist(selectedSublist);
-  }, [loadState, selectedSublist]);
+  }, [loadState, selectedSublist, planActive, plan, dayIndex]);
 
   const filteredWords = useMemo(() => {
     return hideKnown ? baseWords.filter((w) => !knownWords.has(w.english)) : baseWords;
@@ -132,8 +153,16 @@ export default function Learn() {
 
   const handleChangeList = () => {
     clearSelectedWordListId();
+    clearTargetPlan();
     clearWordsCache();
     navigate("/", { replace: true });
+  };
+
+  const handleEndTargetPlan = () => {
+    clearTargetPlan();
+    setPlan(null);
+    setCurrentIndex(0);
+    if (mode === "quiz") resetQuiz();
   };
 
   const modes: { key: Mode; label: string; icon: React.ReactNode }[] = [
@@ -168,11 +197,25 @@ export default function Learn() {
             </div>
             <div className="min-w-0">
               <h1 className="text-sm sm:text-lg font-bold text-foreground leading-tight truncate">{wordListName}</h1>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">{words.length} words</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                {planActive && plan && dayIndex >= 1 && dayIndex <= plan.days
+                  ? `Day ${dayIndex} of ${plan.days} · ${words.length} words`
+                  : `${words.length} words`}
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {planActive && plan && (
+              <span className="text-xs text-muted-foreground hidden sm:inline" aria-hidden>
+                {getWeekLabel(dayIndex, plan.days)}
+              </span>
+            )}
+            {planActive && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={handleEndTargetPlan}>
+                End plan
+              </Button>
+            )}
             <Button variant="outline" className="h-8 text-xs" onClick={handleChangeList}>
               Change list
             </Button>
@@ -199,19 +242,21 @@ export default function Learn() {
               ))}
             </div>
 
-            <Select value={String(selectedSublist)} onValueChange={(v) => handleSublistChange(Number(v))}>
-              <SelectTrigger className="w-[72px] h-8 text-xs" aria-label="Sublist">
-                <SelectValue placeholder="Sublist" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">All</SelectItem>
-                {sublists.map((s) => (
-                  <SelectItem key={s} value={String(s)}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!planActive && (
+              <Select value={String(selectedSublist)} onValueChange={(v) => handleSublistChange(Number(v))}>
+                <SelectTrigger className="w-[72px] h-8 text-xs" aria-label="Sublist">
+                  <SelectValue placeholder="Sublist" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">All</SelectItem>
+                  {sublists.map((s) => (
+                    <SelectItem key={s} value={String(s)}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
             <div className="flex items-center gap-0.5">
               <Tooltip>
@@ -274,6 +319,24 @@ export default function Learn() {
       </header>
 
       <main className="container max-w-4xl mx-auto px-4 py-6">
+        {planNotStarted && plan && (
+          <div className="mb-4 rounded-lg border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground">
+            Plan starts on {plan.startDate}. Until then, all words are shown.
+          </div>
+        )}
+        {planEnded && plan && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/50 px-4 py-2 text-sm">
+            <span className="text-muted-foreground">Plan completed!</span>
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleEndTargetPlan}>
+              Clear plan
+            </Button>
+          </div>
+        )}
+        {planActive && words.length === 0 && (
+          <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
+            No words for today. Mark some as known or come back tomorrow.
+          </div>
+        )}
         {mode === "flashcards" && currentWord && (
           <Flashcard
             word={currentWord}

@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { listFiles, uploadFile, type FileMeta } from "@/lib/api";
 import { clearWordsCache } from "@/lib/vocabulary";
 import { clearSelectedWordListId, getSelectedWordListId, setSelectedWordListId } from "@/lib/word-list-persistence";
+import { setTargetPlan } from "@/lib/target-plan-persistence";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PlusCircle, Target } from "lucide-react";
 
 export default function ChooseWordList() {
   const navigate = useNavigate();
@@ -21,6 +23,15 @@ export default function ChooseWordList() {
   const [addWordsFile, setAddWordsFile] = useState<File | null>(null);
   const [addWordsStatus, setAddWordsStatus] = useState<"idle" | "uploading" | "error">("idle");
   const [addWordsError, setAddWordsError] = useState<string | null>(null);
+
+  const [targetPlanOpen, setTargetPlanOpen] = useState(false);
+  const [targetPlanFileId, setTargetPlanFileId] = useState("");
+  const [targetPlanDays, setTargetPlanDays] = useState(14);
+  const [targetPlanStartDate, setTargetPlanStartDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
+  const [targetPlanError, setTargetPlanError] = useState<string | null>(null);
 
   const sortedFiles = useMemo(() => {
     return [...fileList].sort((a, b) => a.name.localeCompare(b.name));
@@ -59,6 +70,36 @@ export default function ChooseWordList() {
 
   const handleChangeListReset = () => {
     clearSelectedWordListId();
+  };
+
+  const handleTargetPlanOpen = () => {
+    setTargetPlanOpen(true);
+    setTargetPlanError(null);
+    if (sortedFiles.length > 0 && !targetPlanFileId) {
+      setTargetPlanFileId(sortedFiles[0].id);
+    }
+  };
+
+  const handleTargetPlanSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetPlanFileId) {
+      setTargetPlanError("Please select a word list.");
+      return;
+    }
+    const days = Math.floor(Number(targetPlanDays)) || 1;
+    if (days < 1) {
+      setTargetPlanError("Days must be at least 1.");
+      return;
+    }
+    if (!targetPlanStartDate?.trim()) {
+      setTargetPlanError("Please pick a start date.");
+      return;
+    }
+    setTargetPlan({ fileId: targetPlanFileId, days, startDate: targetPlanStartDate.trim() });
+    setSelectedWordListId(targetPlanFileId);
+    clearWordsCache();
+    setTargetPlanOpen(false);
+    navigate("/learn");
   };
 
   const handleAddWordsOpen = () => {
@@ -119,10 +160,18 @@ export default function ChooseWordList() {
             <h1 className="text-lg sm:text-xl font-bold text-foreground leading-tight">Choose a word list</h1>
             <p className="text-xs sm:text-sm text-muted-foreground">Pick a list to start learning, or upload a new one.</p>
           </div>
-          <Button onClick={handleAddWordsOpen} className="gap-2">
-            <PlusCircle size={16} />
-            Add words
-          </Button>
+          <div className="flex gap-2">
+            {sortedFiles.length > 0 && (
+              <Button variant="outline" onClick={handleTargetPlanOpen} className="gap-2">
+                <Target size={16} />
+                Target plan
+              </Button>
+            )}
+            <Button onClick={handleAddWordsOpen} className="gap-2">
+              <PlusCircle size={16} />
+              Add words
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -151,6 +200,62 @@ export default function ChooseWordList() {
           </div>
         )}
       </main>
+
+      <Dialog open={targetPlanOpen} onOpenChange={setTargetPlanOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Target plan</DialogTitle>
+            <DialogDescription>
+              Pick one word list, how many days to spread the words over, and when to start. You’ll see one day’s words at a time on the Learn page.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleTargetPlanSubmit} className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label>Word list</Label>
+              <Select value={targetPlanFileId} onValueChange={setTargetPlanFileId} required>
+                <SelectTrigger aria-label="Word list">
+                  <SelectValue placeholder="Choose a list" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortedFiles.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="target-plan-days">Days</Label>
+              <Input
+                id="target-plan-days"
+                type="number"
+                min={1}
+                value={targetPlanDays}
+                onChange={(e) => setTargetPlanDays(Number(e.target.value) || 1)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="target-plan-start">Start date</Label>
+              <Input
+                id="target-plan-start"
+                type="date"
+                value={targetPlanStartDate}
+                onChange={(e) => setTargetPlanStartDate(e.target.value)}
+              />
+            </div>
+            {targetPlanError && (
+              <p className="text-sm text-destructive">{targetPlanError}</p>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setTargetPlanOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Start plan</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={addWordsOpen} onOpenChange={setAddWordsOpen}>
         <DialogContent className="sm:max-w-md">
